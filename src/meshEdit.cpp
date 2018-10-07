@@ -12,17 +12,199 @@ VertexIter HalfedgeMesh::splitEdge(EdgeIter e0) {
   // newly inserted vertex. The halfedge of this vertex should point along
   // the edge that was split, rather than the new edges.
 
-  showError("splitEdge() not implemented.");
-  return VertexIter();
+	HalfedgeIter h = e0->halfedge();
+
+	HalfedgeIter h1, h2, h3, h4, h5, h6, h7, h8, h_twin, old_h1, old_h2, old_h3, old_h4;
+	FaceIter f1, f2, f3, f4, old_f1, old_f2;
+	VertexIter v1, v2, v3;
+	EdgeIter e1, e2, e3, e4;
+
+	h_twin = h->twin();
+	old_f1 = h->face();
+	old_f2 = h_twin->face();
+	v2 = h->vertex();
+	v3 = h_twin->vertex();
+	if (old_f1->degree() > 3 || old_f2->degree() > 3) {
+		showError("Not both of faces are triangle!");
+		return v2;
+	}
+
+	if (e0->isBoundary()) {
+		showError("Edge is boundary!");
+		return v2;
+	}
+	
+	old_h1 = h->next();
+	old_h2 = old_h1->next();
+	old_h3 = h_twin->next();
+	old_h4 = old_h3->next();
+
+
+	h1 = newHalfedge();
+	h2 = newHalfedge();
+	h3 = newHalfedge();
+	h4 = newHalfedge();
+	h5 = newHalfedge();
+	h6 = newHalfedge();
+	h7 = newHalfedge();
+	h8 = newHalfedge();
+	f1 = newFace();
+	f2 = newFace();
+	f3 = newFace();
+	f4 = newFace();
+	v1 = newVertex();
+	e1 = newEdge();
+	e2 = newEdge();
+	e3 = newEdge();
+	e4 = newEdge();
+
+	v1->halfedge() = h1;
+	v1->position = (v2->position + v3->position) / 2;
+	e1->halfedge() = h1;
+	e2->halfedge() = h3;
+	e3->halfedge() = h5;
+	e4->halfedge() = h7;
+	f1->halfedge() = h1;
+	f2->halfedge() = h2;
+	f3->halfedge() = h3;
+	f4->halfedge() = h4;
+	v2->halfedge() = h3;
+	v3->halfedge() = h2;
+
+	h1->setNeighbors(old_h1, h2, v1, e1, f1);
+	h2->setNeighbors(h7, h1, v3, e1, f2);
+	h3->setNeighbors(h6, h4, v2, e2, f3);
+	h4->setNeighbors(old_h3, h3, v1, e2, f4);
+	h5->setNeighbors(h1, h6, old_h2->vertex(), e3, f1);
+	h6->setNeighbors(old_h2, h5, v1, e3, f3);
+	h7->setNeighbors(old_h4, h8, v1, e4, f2);
+	h8->setNeighbors(h4, h7, old_h4->vertex(), e4, f4);
+
+	old_h1->next() = h5;
+	old_h1->face() = f1;
+	old_h2->next() = h3;
+	old_h2->face() = f3;
+	old_h3->next() = h8;
+	old_h3->face() = f4;
+	old_h4->next() = h2;
+	old_h4->face() = f2;
+
+	deleteHalfedge(h);
+	deleteHalfedge(h_twin);
+	deleteFace(old_f1);
+	deleteFace(old_f2);
+	deleteEdge(e0);
+
+	return v1;
+
+  //showError("splitEdge() not implemented.");
+  //return VertexIter();
 }
 
 VertexIter HalfedgeMesh::collapseEdge(EdgeIter e) {
   // TODO: (meshEdit)
   // This method should collapse the given edge and return an iterator to
   // the new vertex created by the collapse.
+	HalfedgeIter h = e->halfedge();
+	HalfedgeIter h1, h2, h3, h4, h_twin, h_iter;
+	VertexIter v1, v2, v;
+	FaceIter f1, f2;
 
-  showError("collapseEdge() not implemented.");
-  return VertexIter();
+	h_twin = h->twin();
+	f1 = h->face();
+	f2 = h_twin->face();
+	h1 = h->next();
+	h3 = h_twin->next();
+	v1 = h_twin->vertex();
+	v2 = h->vertex();
+
+	if (e->isBoundary()) {
+		showError("Edge is boundary!");
+		return v2;
+	}
+
+	do {
+		h2 = h;
+		h = h->next();
+	} while (h != e->halfedge());
+	do {
+		h4 = h_twin;
+		h_twin = h_twin->next();
+	} while (h_twin != h->twin());
+
+	// reassign vertex
+	v = newVertex();
+	v->halfedge() = h2->twin();
+	v->position = (v1->position + v2->position) / 2;
+	h_iter = h;
+	do {
+		h_iter->vertex() = v;
+		h_iter = h_iter->twin()->next();
+	} while (h_iter != h);
+	h_iter = h_twin;
+	do {
+		h_iter->vertex() = v;
+		h_iter = h_iter->twin()->next();
+	} while (h_iter != h_twin);
+
+	// means the original polygon is triangle, need to be degraded
+	if (h1->next() == h2) {
+		HalfedgeIter h1_twin, h2_twin;
+		EdgeIter e1, e2;
+		e1 = h1->edge();
+		e2 = h2->edge();
+		h1_twin = h1->twin();
+		h2_twin = h2->twin();
+		h1_twin->twin() = h2_twin;
+		h2_twin->twin() = h1_twin;
+		h2_twin->edge() = e1;
+		e1->halfedge() = h1_twin;
+		e2->halfedge() = h2_twin;
+
+		deleteHalfedge(h);
+		deleteHalfedge(h1);
+		deleteHalfedge(h2);
+		deleteEdge(e2);
+		deleteFace(f1);
+	}
+	else {
+		h2->next() = h1;
+		f1->halfedge() = h1;
+		deleteHalfedge(h);
+	}
+	// means the original polygon is triangle, need to be degraded
+	if (h3->next() == h4) {
+		HalfedgeIter h3_twin, h4_twin;
+		EdgeIter e3, e4;
+		e3 = h3->edge();
+		e4 = h4->edge();
+		h3_twin = h3->twin();
+		h4_twin = h4->twin();
+		h3_twin->twin() = h4_twin;
+		h4_twin->twin() = h3_twin;
+		h4_twin->edge() = e3;
+		e3->halfedge() = h3_twin;
+		e4->halfedge() = h4_twin;
+
+		deleteHalfedge(h_twin);
+		deleteHalfedge(h3);
+		deleteHalfedge(h4);
+		deleteEdge(e4);
+		deleteFace(f2);
+	}
+	else {
+		h4->next() = h3;
+		f2->halfedge() = h3;
+		deleteHalfedge(h_twin);
+	}
+
+	deleteEdge(e);
+	deleteVertex(v1);
+	deleteVertex(v2);
+	return v;
+
+  //showError("collapseEdge() not implemented.");
+  //return VertexIter();
 }
 
 VertexIter HalfedgeMesh::collapseFace(FaceIter f) {
@@ -55,8 +237,59 @@ EdgeIter HalfedgeMesh::flipEdge(EdgeIter e0) {
   // This method should flip the given edge and return an iterator to the
   // flipped edge.
 
-  showError("flipEdge() not implemented.");
-  return EdgeIter();
+	if (e0->isBoundary()) {
+		showError("Cannot flip boundary edge!");
+		return e0;
+	}
+	
+
+	HalfedgeIter h = e0->halfedge();
+	HalfedgeIter h1, h2, h3, h4, h5, h6, h_twin;
+	VertexIter v1, v2, v3, v4;
+	FaceIter f1, f2;
+
+	h1 = h->next();
+	h_twin = h->twin();
+	h3 = h_twin->next();
+	h5 = h1->next();
+	h6 = h3->next();
+	v1 = h1->twin()->vertex();
+	v2 = h3->twin()->vertex();
+	v3 = h_twin->vertex();
+	v4 = h->vertex();
+	f1 = h->face();
+	f2 = h_twin->face();
+
+	if (!(f1->normal() == f2->normal())) {
+		showError("f1 and f2 are not on the same plane!");
+		return e0;
+	}
+
+	do {
+		h2 = h;
+		h = h->next();
+	} while (h != e0->halfedge());
+	do {
+		h4 = h_twin;
+		h_twin = h_twin->next();
+	} while (h_twin != h->twin());
+	
+	f1->halfedge() = h;
+	f2->halfedge() = h_twin;
+	v3->halfedge() = h1;
+	v4->halfedge() = h3;
+
+	h->setNeighbors(h5, h_twin, v2, e0, f1);
+	h_twin->setNeighbors(h6, h, v1, e0, f2);
+	h1->setNeighbors(h_twin, h1->twin(), h1->vertex(), h1->edge(), f2);
+	h2->setNeighbors(h3, h2->twin(), h2->vertex(), h2->edge(), f1);
+	h3->setNeighbors(h, h3->twin(), h3->vertex(), h3->edge(), f1);
+	h4->setNeighbors(h1, h4->twin(), h4->vertex(), h4->edge(), f2);
+
+	return e0;
+
+  //showError("flipEdge() not implemented.");
+  //return EdgeIter();
 }
 
 void HalfedgeMesh::subdivideQuad(bool useCatmullClark) {
@@ -151,7 +384,16 @@ void HalfedgeMesh::computeLinearSubdivisionPositions() {
   // TODO For each face, assign the centroid (i.e., arithmetic mean)
   // of the original vertex positions to Face::newPosition.  Note
   // that in general, NOT all faces will be triangles!
-  showError("computeLinearSubdivisionPositions() not implemented.");
+	for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
+		v->newPosition = v->centroid();
+	}
+	for (EdgeIter e = edgesBegin(); e != edgesEnd(); e++) {
+		e->newPosition = e->centroid();
+	}
+	for (FaceIter f = facesBegin(); f != facesEnd(); f++) {
+		f->newPosition = f->centroid();
+	}
+  //showError("computeLinearSubdivisionPositions() not implemented.");
 }
 
 /**
@@ -170,11 +412,32 @@ void HalfedgeMesh::computeCatmullClarkPositions() {
   // rules. (These rules are outlined in the Developer Manual.)
 
   // TODO face
-
+	for (FaceIter f = facesBegin(); f != facesEnd(); f++) {
+		f->newPosition = f->centroid();
+	}
   // TODO edges
-
+	HalfedgeIter h;
+	for (EdgeIter e = edgesBegin(); e != edgesEnd(); e++) {
+		h = e->halfedge();
+		e->newPosition = (e->centroid() * 2 + h->face()->newPosition + h->twin()->face()->newPosition) / 4;
+	}
   // TODO vertices
-  showError("computeCatmullClarkPositions() not implemented.");
+	for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
+		h = v->halfedge();
+		Vector3D Q(0, 0, 0);
+		Vector3D R(0, 0, 0);
+		Size n = 0;
+		do {
+			Q += h->face()->newPosition;
+			R += h->edge()->newPosition;
+			n += 1;
+			h = h->twin()->next();
+		} while (h != v->halfedge());
+		Q /= n;
+		R /= n;
+		v->newPosition = (Q + 2 * R + (n - 3)*(v->position)) / n;
+	}
+  //showError("computeCatmullClarkPositions() not implemented.");
 }
 
 /**
@@ -192,7 +455,20 @@ void HalfedgeMesh::assignSubdivisionIndices() {
   // TODO Iterate over edges, assigning values to Edge::index
 
   // TODO Iterate over faces, assigning values to Face::index
-  showError("assignSubdivisionIndices() not implemented.");
+	Index cnt = 0;
+	for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
+		v->index = cnt;
+		cnt++;
+	}
+	for (EdgeIter e = edgesBegin(); e != edgesEnd(); e++) {
+		e->index = cnt;
+		cnt++;
+	}
+	for (FaceIter f = facesBegin(); f != facesEnd(); f++) {
+		f->index = cnt;
+		cnt++;
+	}
+  //showError("assignSubdivisionIndices() not implemented.");
 }
 
 /**
@@ -213,7 +489,21 @@ void HalfedgeMesh::buildSubdivisionVertexList(vector<Vector3D>& subDVertices) {
 
   // TODO Iterate over faces, assigning Face::newPosition to the appropriate
   // location in the new vertex list.
-  showError("buildSubdivisionVertexList() not implemented.");
+
+	Size totalnum = nVertices() + nEdges() + nFaces();
+	subDVertices.resize(totalnum);
+
+	for (VertexIter v = verticesBegin(); v != verticesEnd(); v++) {
+		subDVertices[v->index] = v->newPosition;
+	}
+	for (EdgeIter e = edgesBegin(); e != edgesEnd(); e++) {
+		subDVertices[e->index] = e->newPosition;
+	}
+	for (FaceIter f = facesBegin(); f != facesEnd(); f++) {
+		subDVertices[f->index] = f->newPosition;
+	}
+
+  //showError("buildSubdivisionVertexList() not implemented.");
 }
 
 /**
@@ -246,7 +536,23 @@ void HalfedgeMesh::buildSubdivisionFaceList(vector<vector<Index> >& subDFaces) {
   // TODO loop around face
   // TODO build lists of four indices for each sub-quad
   // TODO append each list of four indices to face list
-  showError("buildSubdivisionFaceList() not implemented.");
+
+	HalfedgeIter h;
+	for (FaceIter f = facesBegin(); f != facesEnd(); f++) {
+		h = f->halfedge();
+		do {
+			vector<Index> quad(4);
+			quad[0] = h->edge()->index;
+			quad[1] = h->next()->vertex()->index;
+			quad[2] = h->next()->edge()->index;
+			quad[3] = f->index;
+
+			subDFaces.push_back(quad);
+			h = h->next();
+		} while (h != f->halfedge());
+	}
+
+  //showError("buildSubdivisionFaceList() not implemented.");
 }
 
 FaceIter HalfedgeMesh::bevelVertex(VertexIter v) {
@@ -281,9 +587,72 @@ FaceIter HalfedgeMesh::bevelFace(FaceIter f) {
   // positions.  These positions will be updated in
   // HalfedgeMesh::bevelFaceComputeNewPositions (which you also have to
   // implement!)
+	HalfedgeIter h = f->halfedge();
 
-  showError("bevelFace() not implemented.");
-  return facesBegin();
+	HalfedgeIter h1, h2, h3, h4, h_twin, pre_h, pre_h1, pre_h2;
+	FaceIter newf, ringf, pre_ringf;
+	VertexIter v, v1;
+	EdgeIter e1, e2;
+
+	newf = newFace();
+	
+	do {
+		h_twin = h->twin();
+		v = h->vertex();
+
+		ringf = newFace();
+		e1 = newEdge();
+		e2 = newEdge();
+		v1 = newVertex();
+		h1 = newHalfedge();
+		h2 = newHalfedge();
+		h3 = newHalfedge();
+		h4 = newHalfedge();
+
+		// update new face, edges and vertex
+		ringf->halfedge() = h;
+		e1->halfedge() = h1;
+		e2->halfedge() = h3;
+		v1->halfedge() = h2;
+
+		// update h
+		h->face() = ringf;
+		
+		// update h1,h2,h3,h4
+		h1->setNeighbors(h3, h2, h1->vertex(), e1, ringf);
+		h2->setNeighbors(h2->next(), h1, v1, e1, newf);
+		h3->setNeighbors(h, h4, v1, e2, ringf);
+		h4->setNeighbors(h4->next(), h3, v, e2, h4->face());
+
+		// update pre_h_twin and pre_h4
+		if (h != f->halfedge()) {
+			pre_h->next() = h4;
+			pre_h1->vertex() = v1;
+			pre_h2->next() = h2;
+			h4->next() = pre_h1;
+			h4->face() = pre_ringf;
+		}
+		pre_h = h;
+		pre_h1 = h1;
+		pre_h2 = h2;
+		pre_ringf = ringf;
+
+		h = h->next();
+	} while (h != f->halfedge());
+
+	HalfedgeIter tmp_h4 = h->next()->next()->next()->twin();
+	pre_h->next() = tmp_h4;
+	pre_h1->vertex() = h->next()->next()->next()->vertex();
+	pre_h2->next() = h->next()->next()->twin();
+	tmp_h4->next() = pre_h1;
+	tmp_h4->face() = pre_ringf;
+
+	newf->halfedge() = pre_h2;
+
+	deleteFace(f);
+	return newf;
+  //showError("bevelFace() not implemented.");
+  //return facesBegin();
 }
 
 
@@ -311,7 +680,33 @@ void HalfedgeMesh::bevelFaceComputeNewPositions(
   //    position correponding to vertex i
   // }
   //
+	int n = newHalfedges.size();
+	if (n == 0) {
+		return;
+	}
+	Vector3D barycenter = originalVertexPositions[0];
+	for( int i = 1; i < n; i++ )
+	{
+		barycenter += originalVertexPositions[i];
+	}
+	barycenter = barycenter / n;
 
+	// compute face normal
+	Vector3D normal(0., 0., 0.);
+	for (int i = 0; i < n; i++) {
+		Vector3D pi = originalVertexPositions[i];
+		Vector3D pj = originalVertexPositions[(i + 1) % n];
+
+		normal += cross(pi, pj);
+	}
+	normal = normal.unit();
+
+	for (int i = 0; i < n; i++)
+	{
+		Vector3D dis = originalVertexPositions[i] - barycenter;
+		newHalfedges[i]->vertex()->position = barycenter + dis * tangentialInset + normalShift * normal;
+	}
+	return;
 }
 
 void HalfedgeMesh::bevelVertexComputeNewPositions(
@@ -360,7 +755,51 @@ void HalfedgeMesh::splitPolygons(vector<FaceIter>& fcs) {
 void HalfedgeMesh::splitPolygon(FaceIter f) {
   // TODO: (meshedit) 
   // Triangulate a polygonal face
-  showError("splitPolygon() not implemented.");
+
+	// if it is already a triangle
+	if (f->degree() <= 3) {
+		return;
+	}
+
+	HalfedgeIter h = f->halfedge();
+
+	HalfedgeIter h_next, h1, h2, pre_h2;
+	EdgeIter e1;
+	FaceIter f1;
+	VertexIter v0, v1;
+
+	v0 = h->vertex();
+
+	pre_h2 = h;
+	h = h->next();
+	h_next = h->next();
+
+	while (h_next->twin()->vertex() != v0) {
+		e1 = newEdge();
+		f1 = newFace();
+		h1 = newHalfedge();
+		h2 = newHalfedge();
+
+		v1 = h_next->vertex();
+		e1->halfedge() = h1;
+		f1->halfedge() = h1;
+		h->next() = h1;
+		h->face() = f1;
+		pre_h2->face() = f1;
+		h1->setNeighbors(pre_h2, h2, v1, e1, f1);
+		h2->setNeighbors(h_next, h1, v0, e1, h2->face());
+
+		pre_h2 = h2;
+		h = h_next;
+		h_next = h_next->next();	
+	}
+	f->halfedge() = h;
+	pre_h2->face() = f;
+	h->face() = f;
+	h_next->face() = f;
+	h_next->next() = pre_h2;
+
+  /*showError("splitPolygon() not implemented.");*/
 }
 
 EdgeRecord::EdgeRecord(EdgeIter& _edge) : edge(_edge) {
