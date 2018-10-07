@@ -494,6 +494,7 @@ void Application::init_material(MaterialInfo &material) {
 void Application::cursor_event(float x, float y) {
   if (leftDown && !middleDown && !rightDown) {
     mouse1_dragged(x, y);
+	if ((mode == MODEL_MODE) && (action == Action::Bevel) && (scene->has_selection())) return;
   } else if (!leftDown && !middleDown && rightDown) {
     mouse2_dragged(x, y);
   } else if (!leftDown && !middleDown && !rightDown) {
