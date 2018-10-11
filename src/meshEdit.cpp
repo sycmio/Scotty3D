@@ -255,10 +255,10 @@ EdgeIter HalfedgeMesh::flipEdge(EdgeIter e0) {
 	f1 = h->face();
 	f2 = h_twin->face();
 
-	if ((f1->normal()-f2->normal()).norm()>error_threshold) {
-		showError("f1 and f2 are not on the same plane!");
-		return e0;
-	}
+	//if ((f1->normal()-f2->normal()).norm()>error_threshold) {
+	//	showError("f1 and f2 are not on the same plane!");
+	//	return e0;
+	//}
 
 	do {
 		h2 = h;
@@ -582,6 +582,11 @@ FaceIter HalfedgeMesh::bevelFace(FaceIter f) {
   // positions.  These positions will be updated in
   // HalfedgeMesh::bevelFaceComputeNewPositions (which you also have to
   // implement!)
+	if (f->isBoundary()) {
+		showError("Face is boundary!");
+		return f;
+	}
+
 	HalfedgeIter h = f->halfedge();
 
 	HalfedgeIter h1, h2, h3, h4, pre_h, pre_h1, pre_h2;
@@ -642,7 +647,7 @@ FaceIter HalfedgeMesh::bevelFace(FaceIter f) {
 	cur_h4->next() = pre_h1;
 	cur_h4->face() = pre_ringf;
 
-	newf->halfedge() = pre_h2;
+	newf->halfedge() = cur_h2;
 
 	deleteFace(f);
 	return newf;
@@ -675,8 +680,9 @@ void HalfedgeMesh::bevelFaceComputeNewPositions(
   //    position correponding to vertex i
   // }
   //
-	//normalShift = 1;
-	//tangentialInset = 1;
+	//normalShift = 0.5;
+	//tangentialInset = 0.5;
+	/*cout << normalShift << " " << tangentialInset << endl;*/
 
 	int n = newHalfedges.size();
 	if (n == 0) {
@@ -702,9 +708,9 @@ void HalfedgeMesh::bevelFaceComputeNewPositions(
 	for (int i = 0; i < n; i++)
 	{
 		//cout << newHalfedges[i]->twin()->vertex()->position << endl;
-		//cout << originalVertexPositions[i];
-		Vector3D dis = newHalfedges[i]->twin()->vertex()->position - barycenter;
-		newHalfedges[i]->vertex()->position = barycenter + tangentialInset * dis + normalShift * normal;
+		//cout << originalVertexPositions[i] << endl;
+		Vector3D dis = originalVertexPositions[i] - barycenter;
+		newHalfedges[i]->vertex()->position = barycenter + (1-tangentialInset) * dis + normalShift * normal;
 	}
 	return;
 }
