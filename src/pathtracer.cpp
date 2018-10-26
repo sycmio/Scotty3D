@@ -24,7 +24,7 @@ using std::max;
 
 namespace CMU462 {
 
-// #define ENABLE_RAY_LOGGING 1
+ //#define ENABLE_RAY_LOGGING 1
 
 PathTracer::PathTracer(size_t ns_aa, size_t max_ray_depth, size_t ns_area_light,
                        size_t ns_diff, size_t ns_glsy, size_t ns_refr,
@@ -506,9 +506,21 @@ Spectrum PathTracer::raytrace_pixel(size_t x, size_t y) {
   size_t width = sampleBuffer.w;
   size_t height = sampleBuffer.h;
 
-  Vector2D p = Vector2D(0.5,0.5);
-  //Vector2D p = Vector2D((float)x/(float)width, (float)y/(float)height);
-  return trace_ray(camera->generate_ray(p.x, p.y));
+  //Vector2D p = Vector2D(0.5,0.5);
+
+  ////debug use
+  //auto a = camera->generate_ray(0.5, 0.5);
+
+  Spectrum result(0,0,0);
+  for (int i = 0; i < num_samples; i++) {
+	  Vector2D sample = gridSampler->get_sample();
+	  Vector2D p = Vector2D((float)(x), (float)(y)) + sample;
+	  p.x /= (float)width;
+	  p.y /= (float)height;
+	  result = result + trace_ray(camera->generate_ray(p.x, p.y));
+  }
+  result *= (float)(1)/(float)(num_samples);
+  return result;
 }
 
 void PathTracer::raytrace_tile(int tile_x, int tile_y, int tile_w, int tile_h) {

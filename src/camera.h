@@ -64,6 +64,7 @@ class Camera {
   Vector3D view_point() const { return targetPos; }
   Vector3D up_dir() const { return c2w[1]; }
   double v_fov() const { return vFov; }
+  double h_fov() const { return hFov; }
   double aspect_ratio() const { return ar; }
   double near_clip() const { return nClip; }
   double far_clip() const { return fClip; }

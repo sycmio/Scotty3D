@@ -19,7 +19,34 @@ BBox Triangle::get_bbox() const {
 
 bool Triangle::intersect(const Ray& r) const {
   // TODO (PathTracer): implement ray-triangle intersection
-
+	Vector3D p0 = mesh->positions[v1];
+	Vector3D p1 = mesh->positions[v2];
+	Vector3D p2 = mesh->positions[v3];
+	Vector3D e1 = p1 - p0;
+	Vector3D e2 = p2 - p0;
+	Vector3D s = r.o - p0;
+	Vector3D d = r.d;
+	double c = dot(cross(e1, d), e2);
+	if (c == 0) {
+		return false;
+	}
+	else {
+		double b1 = -dot(cross(s, e2), d);
+		double b2 = dot(cross(e1, d), s);
+		double b3 = -dot(cross(s, e2), e1);
+		Vector3D solution = Vector3D(b1, b2, b3) / c;
+		double u = solution.x;
+		double v = solution.y;
+		double w = 1 - u - v;
+		double t = solution.z;
+		if (t >= r.min_t&&t <= r.max_t&&u >= 0 && u <= 1 && v >= 0 && v <= 1 && w >= 0 && w <= 1) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	
   return false;
 }
 
@@ -27,7 +54,40 @@ bool Triangle::intersect(const Ray& r, Intersection* isect) const {
   // TODO (PathTracer):
   // implement ray-triangle intersection. When an intersection takes
   // place, the Intersection data should be updated accordingly
-
+	Vector3D p0 = mesh->positions[v1];
+	Vector3D p1 = mesh->positions[v2];
+	Vector3D p2 = mesh->positions[v3];
+	Vector3D e1 = p1 - p0;
+	Vector3D e2 = p2 - p0;
+	Vector3D s = r.o - p0;
+	Vector3D d = r.d;
+	double c = dot(cross(e1, d), e2);
+	if (c == 0) {
+		return false;
+	}
+	else {
+		double b1 = -dot(cross(s, e2), d);
+		double b2 = dot(cross(e1, d), s);
+		double b3 = -dot(cross(s, e2), e1);
+		Vector3D solution = Vector3D(b1, b2, b3) / c;
+		double u = solution.x;
+		double v = solution.y;
+		double w = 1 - u - v;
+		double t = solution.z;
+		if (t >= r.min_t&&t <= r.max_t&&u >= 0 && u <= 1 && v >= 0 && v <= 1 && w >= 0 && w <= 1) {
+			isect->t = t;
+			isect->n = mesh->normals[v1] * w + mesh->normals[v2] * u + mesh->normals[v3] * v;
+			if (dot(isect->n, d) > 0) {
+				isect->n = -isect->n;
+			}
+			isect->primitive = this;
+			isect->bsdf = mesh->get_bsdf();
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
   return false;
 }
 

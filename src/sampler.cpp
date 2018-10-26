@@ -1,4 +1,5 @@
 #include "sampler.h"
+#include <time.h>
 
 namespace CMU462 {
 
@@ -7,8 +8,9 @@ namespace CMU462 {
 Vector2D UniformGridSampler2D::get_sample() const {
   // TODO (PathTracer):
   // Implement uniform 2D grid sampler
-  
-  return Vector2D(0.5, 0.5);
+	srand((unsigned)time(NULL));	
+	return Vector2D((float)rand() / RAND_MAX, (float)rand() / RAND_MAX);
+  //return Vector2D(0.5, 0.5);
 }
 
 // Uniform Hemisphere Sampler3D Implementation //
