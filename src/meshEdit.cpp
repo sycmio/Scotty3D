@@ -154,6 +154,7 @@ VertexIter HalfedgeMesh::collapseEdge(EdgeIter e) {
 		h2_twin->edge() = e1;
 		e1->halfedge() = h1_twin;
 		e2->halfedge() = h2_twin;
+		h2->vertex()->halfedge() = h1_twin;
 
 		deleteHalfedge(h);
 		deleteHalfedge(h1);
@@ -179,6 +180,7 @@ VertexIter HalfedgeMesh::collapseEdge(EdgeIter e) {
 		h4_twin->edge() = e3;
 		e3->halfedge() = h3_twin;
 		e4->halfedge() = h4_twin;
+		h4->vertex()->halfedge() = h3_twin;
 
 		deleteHalfedge(h_twin);
 		deleteHalfedge(h3);
@@ -205,8 +207,104 @@ VertexIter HalfedgeMesh::collapseFace(FaceIter f) {
   // TODO: (meshEdit)
   // This method should collapse the given face and return an iterator to
   // the new vertex created by the collapse.
-  showError("collapseFace() not implemented.");
-  return VertexIter();
+	vector<EdgeIter> oldEdges;
+	vector<HalfedgeIter> oldHalfedges;
+	vector<FaceIter> oldFaces;
+	vector<VertexIter> oldVertices;
+	HalfedgeIter h = f->halfedge();
+	HalfedgeIter h0, h1, h2, h_iter;
+	EdgeIter e;
+	VertexIter v, v1;
+	
+	bool hasHalfEdge = false;
+	do {
+		h0 = h->twin();
+		if (h0->face()->degree() > 3) {
+			hasHalfEdge = true;
+			break;
+		}
+		h = h->next();
+	} while (h != f->halfedge());
+	if (!hasHalfEdge) {
+		showError("Don't allow degenerate case!");
+		return verticesBegin();
+	}
+
+	oldFaces.push_back(f);
+	v = newVertex();
+	v->position = f->centroid();
+
+	// reassign vertex
+	do {
+		h_iter = h;
+		oldVertices.push_back(h->vertex());
+		do {
+			h_iter->vertex() = v;
+			h_iter = h_iter->twin()->next();
+		} while (h_iter != h);
+		h = h->next();
+	} while (h != f->halfedge());
+
+	// deal with each face
+	do {
+		e = h->edge();
+		v1 = h->vertex();
+		h0 = h->twin();
+		h1 = h0->next();
+		do {
+			h2 = h0;
+			h0 = h0->next();
+		} while (h0 != h->twin());
+
+		
+		FaceIter f1 = h0->face();
+		// triangle face, degenerate case
+		if (h1->next() == h2) {
+			HalfedgeIter h1_twin, h2_twin;
+			EdgeIter e1, e2;
+			e1 = h1->edge();
+			e2 = h2->edge();
+			h1_twin = h1->twin();
+			h2_twin = h2->twin();
+			h1_twin->twin() = h2_twin;
+			h2_twin->twin() = h1_twin;
+			h2_twin->edge() = e1;
+			e1->halfedge() = h1_twin;
+			e2->halfedge() = h2_twin;
+			h2->vertex()->halfedge() = h1_twin;
+
+			oldHalfedges.push_back(h1);
+			oldHalfedges.push_back(h2);
+			oldEdges.push_back(e2);
+			oldFaces.push_back(f1);
+		}
+		// general case
+		else {
+			h2->next() = h1;
+			f1->halfedge() = h1;
+			v->halfedge() = h1;
+		}
+		oldEdges.push_back(e);
+		oldHalfedges.push_back(h);
+		oldHalfedges.push_back(h0);
+		h = h->next();
+	} while (h != f->halfedge());
+
+	for (auto i = oldEdges.begin(); i != oldEdges.end(); i++) {
+		deleteEdge(*i);
+	}
+	for (auto i = oldVertices.begin(); i != oldVertices.end(); i++) {
+		deleteVertex(*i);
+	}
+	for (auto i = oldFaces.begin(); i != oldFaces.end(); i++) {
+		deleteFace(*i);
+	}
+	for (auto i = oldHalfedges.begin(); i != oldHalfedges.end(); i++) {
+		deleteHalfedge(*i);
+	}
+	return v;
+  //showError("collapseFace() not implemented.");
+  //return VertexIter();
 }
 
 FaceIter HalfedgeMesh::eraseVertex(VertexIter v) {
@@ -241,7 +339,7 @@ EdgeIter HalfedgeMesh::flipEdge(EdgeIter e0) {
 	HalfedgeIter h1, h2, h3, h4, h5, h6, h_twin;
 	VertexIter v1, v2, v3, v4;
 	FaceIter f1, f2;
-	float error_threshold = 0.0000001;
+	//float error_threshold = 0.0000001;
 
 	h1 = h->next();
 	h_twin = h->twin();
@@ -557,9 +655,45 @@ FaceIter HalfedgeMesh::bevelVertex(VertexIter v) {
   // need to update the vertex positions.  These positions will be updated in
   // HalfedgeMesh::bevelVertexComputeNewPositions (which you also have to
   // implement!)
+	HalfedgeIter h, h1, h2, h3, h4, pre_h3;
+	EdgeIter e1;
+	VertexIter v1;
+	FaceIter newf, f1;
 
-  showError("bevelVertex() not implemented.");
-  return facesBegin();
+	newf = newFace();
+	h = v->halfedge();
+	do {
+		h1 = h->twin();
+		h4 = h1->next();
+		f1 = h1->face();
+		e1 = newEdge();
+		v1 = newVertex();
+		h2 = newHalfedge();
+		h3 = newHalfedge();
+
+		e1->halfedge() = h2;
+		v1->halfedge() = h2;
+		h1->next() = h2;
+		h2->setNeighbors(h4, h3, v1, e1, f1);
+		h3->setNeighbors(h3->next(), h2, h3->vertex(), e1, newf);
+		h->vertex() = v1;
+		if (h != v->halfedge()) {
+			h3->next() = pre_h3;
+			pre_h3->vertex() = v1;
+		}
+		pre_h3 = h3;
+		h = h4;
+	} while (h != v->halfedge());
+
+	h3 = h->twin()->next()->twin();
+	h3->next() = pre_h3;
+	pre_h3->vertex() = h->vertex();
+	newf->halfedge() = h3;
+
+	return newf;
+
+  //showError("bevelVertex() not implemented.");
+  //return facesBegin();
 }
 
 FaceIter HalfedgeMesh::bevelEdge(EdgeIter e) {
@@ -594,7 +728,7 @@ FaceIter HalfedgeMesh::bevelFace(FaceIter f) {
 	VertexIter v, v1;
 	EdgeIter e1, e2;
 
-	newf = newFace();
+	newf = f;
 	
 	do {
 		v = h->vertex();
@@ -649,7 +783,6 @@ FaceIter HalfedgeMesh::bevelFace(FaceIter f) {
 
 	newf->halfedge() = cur_h2;
 
-	deleteFace(f);
 	return newf;
   //showError("bevelFace() not implemented.");
   //return facesBegin();
@@ -710,7 +843,7 @@ void HalfedgeMesh::bevelFaceComputeNewPositions(
 		//cout << newHalfedges[i]->twin()->vertex()->position << endl;
 		//cout << originalVertexPositions[i] << endl;
 		Vector3D dis = originalVertexPositions[i] - barycenter;
-		newHalfedges[i]->vertex()->position = barycenter + (1-tangentialInset) * dis + normalShift * normal;
+		newHalfedges[i]->vertex()->position = barycenter + max(0., (0.5-tangentialInset)) * dis + normalShift * normal;
 	}
 	return;
 }
@@ -726,7 +859,12 @@ void HalfedgeMesh::bevelVertexComputeNewPositions(
   // The basic strategy here is to loop over the list of outgoing halfedges,
   // and use the preceding and next vertex position from the original mesh
   // (in the orig array) to compute an offset vertex position.
-
+	int n = newHalfedges.size();
+	for (int i = 0; i < n; i++)
+	{
+		Vector3D dis = newHalfedges[i]->twin()->vertex()->position - originalVertexPosition;
+		newHalfedges[i]->vertex()->position = originalVertexPosition + min(1., abs(tangentialInset)) * dis;
+	}
 }
 
 void HalfedgeMesh::bevelEdgeComputeNewPositions(
@@ -817,6 +955,21 @@ EdgeRecord::EdgeRecord(EdgeIter& _edge) : edge(_edge) {
   //    EdgeRecord::optimalPoint.
   // -> Also store the cost associated with collapsing this edg in
   //    EdgeRecord::Cost.
+	Matrix4x4 edgeQuadric = edge->halfedge()->vertex()->quadric + edge->halfedge()->twin()->vertex()->quadric;
+	Matrix3x3 A;
+	A[0] = edgeQuadric[0].to3D();
+	A[1] = edgeQuadric[1].to3D();
+	A[2] = edgeQuadric[2].to3D();
+	Vector3D b(edgeQuadric[3].to3D());
+	if (A.det() != 0) {
+		optimalPoint = A.inv() * b;
+	}
+	else {
+		optimalPoint = (edge->halfedge()->vertex()->position + edge->halfedge()->twin()->vertex()->position) / 2;
+	}
+	Vector4D x(optimalPoint, 1);
+	score = dot(x, edgeQuadric*x);
+	edge = _edge;;
 }
 
 void MeshResampler::upsample(HalfedgeMesh& mesh)
@@ -930,32 +1083,162 @@ void MeshResampler::downsample(HalfedgeMesh& mesh) {
   // Compute initial quadrics for each face by simply writing the plane equation
   // for the face in homogeneous coordinates. These quadrics should be stored
   // in Face::quadric
+	FaceIter f;
+	VertexIter v;
+	HalfedgeIter h;
+	EdgeIter e;
+	Size n = mesh.nEdges();
+	Size target_iter_num = n / 4;
+
+	for (f = mesh.facesBegin(); f != mesh.facesEnd(); f++) {
+		double d = -dot(f->normal(), f->centroid());
+		Vector4D homogenous_f(f->normal(), d);
+		f->quadric = outer(homogenous_f, homogenous_f);
+	}
   // -> Compute an initial quadric for each vertex as the sum of the quadrics
   //    associated with the incident faces, storing it in Vertex::quadric
+	for (v = mesh.verticesBegin(); v != mesh.verticesEnd(); v++) {
+		h = v->halfedge();
+		Matrix4x4 vertexQuadric;
+		vertexQuadric.zero();
+		do {
+			vertexQuadric += h->face()->quadric;
+			h = h->twin()->next();
+		} while (h != v->halfedge());
+	}
   // -> Build a priority queue of edges according to their quadric error cost,
   //    i.e., by building an EdgeRecord for each edge and sticking it in the
   //    queue.
+	MutablePriorityQueue<EdgeRecord> queue;
+	for (e = mesh.edgesBegin(); e != mesh.edgesEnd(); e++) {
+		e->record = EdgeRecord(e);
+		queue.insert(e->record);
+	}
   // -> Until we reach the target edge budget, collapse the best edge. Remember
   //    to remove from the queue any edge that touches the collapsing edge
   //    BEFORE it gets collapsed, and add back into the queue any edge touching
   //    the collapsed vertex AFTER it's been collapsed. Also remember to assign
   //    a quadric to the collapsed vertex, and to pop the collapsed edge off the
   //    top of the queue.
-  showError("downsample() not implemented.");
+	EdgeRecord best_edge;
+	VertexIter v1, v2;
+	for (Size i = 0; i < target_iter_num; i++) {
+		cout << i << endl;
+		best_edge = queue.top();
+		queue.pop();
+		v1 = best_edge.edge->halfedge()->vertex();
+		v2 = best_edge.edge->halfedge()->twin()->vertex();
+		Matrix4x4 newQuadric = v1->quadric + v2->quadric;
+
+		h = v1->halfedge();
+		do {
+			e = h->edge();
+			queue.remove(e->record);
+			h = h->twin()->next();
+		} while (h != v1->halfedge());
+		h = v2->halfedge();
+		do {
+			e = h->edge();
+			queue.remove(e->record);
+			h = h->twin()->next();
+		} while (h != v2->halfedge());
+
+		v = mesh.collapseEdge(best_edge.edge);
+		v->position = best_edge.optimalPoint;
+		v->quadric = newQuadric;
+		h = v->halfedge();
+		do {
+			e = h->edge();
+			e->record = EdgeRecord(e);
+			queue.insert(e->record);
+			h = h->twin()->next();
+		} while (h != v->halfedge());
+	}
+  //showError("downsample() not implemented.");
 }
 
 void MeshResampler::resample(HalfedgeMesh& mesh) {
   // TODO: (meshEdit)
   // Compute the mean edge length.
-  // Repeat the four main steps for 5 or 6 iterations
-  // -> Split edges much longer than the target length (being careful about
-  //    how the loop is written!)
-  // -> Collapse edges much shorter than the target length.  Here we need to
-  //    be EXTRA careful about advancing the loop, because many edges may have
-  //    been destroyed by a collapse (which ones?)
-  // -> Now flip each edge if it improves vertex degree
-  // -> Finally, apply some tangential smoothing to the vertex positions
-  showError("resample() not implemented.");
+	double meanL = 0;
+	double maxthreshold, minthreshold;
+	EdgeIter e, nextEdge;
+	VertexIter v;
+	Size n = mesh.nEdges();
+
+	if (n <= 0) {
+		return;
+	}
+	for (e = mesh.edgesBegin(); e != mesh.edgesEnd(); e++) {
+		meanL += e->length();
+	}
+	meanL /= n;
+	maxthreshold = 4 * meanL / 3;
+	minthreshold = 4 * meanL / 5;
+
+	// Repeat the four main steps for 5 or 6 iterations
+	int repeat_time = 5;
+	for (int cnt = 0; cnt < repeat_time; cnt++) {	
+		// -> Split edges much longer than the target length (being careful about
+		//    how the loop is written!)
+		e = mesh.edgesBegin();
+		for (int i = 0; i < n; i++) {
+			nextEdge = e;
+			nextEdge++;
+			if (e->length() > maxthreshold) {
+				mesh.splitEdge(e);
+			}
+			e = nextEdge;
+		}
+		// -> Collapse edges much shorter than the target length.  Here we need to
+		//    be EXTRA careful about advancing the loop, because many edges may have
+		//    been destroyed by a collapse (which ones?)
+		n = mesh.nEdges();
+		e = mesh.edgesBegin();
+		for (int i = 0; i < n; i++) {
+			nextEdge = e;
+			nextEdge++;
+			if (e->length() < minthreshold) {
+				mesh.collapseEdge(e);
+				e = mesh.edgesBegin();
+			}
+			else {
+				e = nextEdge;
+			}
+		}
+		// -> Now flip each edge if it improves vertex degree
+		int a1, a2, b1, b2, divBefore, divAfter;
+		for (e = mesh.edgesBegin(); e != mesh.edgesEnd(); e++) {
+			a1 = e->halfedge()->vertex()->degree();
+			a2 = e->halfedge()->twin()->vertex()->degree();
+			b1 = e->halfedge()->next()->twin()->vertex()->degree();
+			b2 = e->halfedge()->twin()->next()->twin()->vertex()->degree();
+			divBefore = abs(a1 - 6) + abs(a2 - 6) + abs(b1 - 6) + abs(b2 - 6);
+			divAfter = abs(a1 - 7) + abs(a2 - 7) + abs(b1 - 5) + abs(b2 - 5);
+			if (divAfter < divBefore) {
+				mesh.flipEdge(e);
+			}
+		}
+		// -> Finally, apply some tangential smoothing to the vertex positions
+		double w = 1. / 5.;
+		int smooth_time = 10;
+		for (int i = 0; i < smooth_time; i++) {
+			vector<Vector3D> centroids;
+			vector<Vector3D> normals;
+			for (v = mesh.verticesBegin(); v != mesh.verticesEnd(); v++) {
+				centroids.push_back(v->neighborhoodCentroid());
+				normals.push_back(v->normal());
+			}
+			n = 0;
+			for (v = mesh.verticesBegin(); v != mesh.verticesEnd(); v++) {
+				Vector3D direction = centroids[n] - v->position;
+				v->position = v->position + w * (direction - dot(normals[n], direction)*normals[n]);
+				n++;
+			}
+		}
+	}
+
+  /*showError("resample() not implemented.");*/
 }
 
 }  // namespace CMU462

@@ -503,7 +503,11 @@ Spectrum PathTracer::raytrace_pixel(size_t x, size_t y) {
 
   int num_samples = ns_aa;
 
-  Vector2D p = Vector2D(0.5, 0.5);
+  size_t width = sampleBuffer.w;
+  size_t height = sampleBuffer.h;
+
+  Vector2D p = Vector2D(0.5,0.5);
+  //Vector2D p = Vector2D((float)x/(float)width, (float)y/(float)height);
   return trace_ray(camera->generate_ray(p.x, p.y));
 }
 
