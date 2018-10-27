@@ -112,14 +112,16 @@ Ray Camera::generate_ray(double x, double y) const {
   // TODO (PathTracer):
   // compute position of the input sensor sample coordinate on the
   // canonical sensor plane one unit away from the pinhole.
-	double x_pos = (x - 0.5)*vFov;
-	double y_pos = (0.5 - y)*hFov;
+	double sensor_height = tan(vFov*PI / 360)*2;
+	double sensor_width = sensor_height * ar;
+	double x_pos = (x - 0.5)*sensor_width;
+	double y_pos = (y - 0.5)*sensor_height;
 	Matrix4x4 transformation;
 	transformation.column(0) = Vector4D(c2w.column(0), 0);
 	transformation.column(1) = Vector4D(c2w.column(1), 0);
 	transformation.column(2) = Vector4D(c2w.column(2), 0);
 	transformation.column(3) = Vector4D(pos, 1);
-	return Ray(Vector3D(0, 0, 0), Vector3D(x_pos, y_pos, 1)).transform_by(transformation);
+	return Ray(Vector3D(0, 0, 0), Vector3D(x_pos, y_pos, -1).unit()).transform_by(transformation);
   //return Ray(Vector3D(0, 0, 0), Vector3D(0, 0, 1));
 }
 

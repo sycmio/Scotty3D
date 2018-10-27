@@ -39,7 +39,8 @@ bool Triangle::intersect(const Ray& r) const {
 		double v = solution.y;
 		double w = 1 - u - v;
 		double t = solution.z;
-		if (t >= r.min_t&&t <= r.max_t&&u >= 0 && u <= 1 && v >= 0 && v <= 1 && w >= 0 && w <= 1) {
+		if (t >= r.min_t && t <= r.max_t && u >= 0 && u <= 1 && v >= 0 && v <= 1 && w >= 0 && w <= 1) {
+			r.max_t = t;
 			return true;
 		}
 		else {
@@ -74,14 +75,15 @@ bool Triangle::intersect(const Ray& r, Intersection* isect) const {
 		double v = solution.y;
 		double w = 1 - u - v;
 		double t = solution.z;
-		if (t >= r.min_t&&t <= r.max_t&&u >= 0 && u <= 1 && v >= 0 && v <= 1 && w >= 0 && w <= 1) {
+		if (t >= r.min_t && t <= r.max_t && u >= 0 && u <= 1 && v >= 0 && v <= 1 && w >= 0 && w <= 1) {
 			isect->t = t;
 			isect->n = mesh->normals[v1] * w + mesh->normals[v2] * u + mesh->normals[v3] * v;
 			if (dot(isect->n, d) > 0) {
 				isect->n = -isect->n;
 			}
 			isect->primitive = this;
-			isect->bsdf = mesh->get_bsdf();
+			isect->bsdf = get_bsdf();
+			r.max_t = t;
 			return true;
 		}
 		else {
