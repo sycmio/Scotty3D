@@ -440,7 +440,7 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
     Vector3D dir_to_light;
     float dist_to_light;
     float pr;
-
+	
     // ### Estimate direct lighting integral
     for (SceneLight* light : scene->lights) {
       // no need to take multiple samples from a point/directional source
@@ -470,11 +470,11 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
         // TODO (PathTracer):
         // (Task 4) Construct a shadow ray and compute whether the intersected surface is
         // in shadow. Only accumulate light if not in shadow.
-		//Ray shadow_ray(hit_p + EPS_D * dir_to_light, dir_to_light, dist_to_light- EPS_D*1000);
-		//if (!bvh->intersect(shadow_ray)) {
-		//	L_out += (cos_theta / (num_light_samples * pr)) * f * light_L;
-		//}
-        L_out += (cos_theta / (num_light_samples * pr)) * f * light_L;
+		Ray shadow_ray(hit_p + EPS_D * dir_to_light, dir_to_light, dist_to_light);
+		if (!bvh->intersect(shadow_ray)) {
+			L_out += (cos_theta / (num_light_samples * pr)) * f * light_L;
+		}
+        //L_out += (cos_theta / (num_light_samples * pr)) * f * light_L;
       }
     }
   }
@@ -516,6 +516,10 @@ Spectrum PathTracer::raytrace_pixel(size_t x, size_t y) {
   Spectrum result(0,0,0);
   for (int i = 0; i < num_samples; i++) {
 	  Vector2D sample = gridSampler->get_sample();
+	  if (num_samples == 1) {
+		  sample.x = 0.5;
+		  sample.y = 0.5;
+	  }
 	  Vector2D p = Vector2D((float)(x), (float)(y)) + sample;
 	  p.x /= (float)width;
 	  p.y /= (float)height;
