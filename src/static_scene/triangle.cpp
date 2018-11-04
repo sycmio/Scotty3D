@@ -45,7 +45,7 @@ bool Triangle::intersect(const Ray& r) const {
 		double w = 1 - u - v;
 		double t = solution.z;
 		if (t >= r.min_t && t <= r.max_t && u >= 0 && u <= 1 && v >= 0 && v <= 1 && w >= 0 && w <= 1) {
-			r.max_t = t;
+			//r.max_t = t;
 			return true;
 		}
 		else {

@@ -34,14 +34,14 @@ bool BBox::intersect(const Ray &r, double &t0, double &t1) const {
 	if ((tmin > tymax) || (tymin > tmax)) {
 		return false;
 	}
-	tmin = std::min(tmin, tymin);
-	tmax = std::max(tmax, tymax);
+	tmin = std::max(tmin, tymin);
+	tmax = std::min(tmax, tymax);
 
 	if ((tmin > tzmax) || (tzmin > tmax)) {
 		return false;
 	}
-	t0 = std::min(tmin, tzmin);
-	t1 = std::max(tmax, tzmax);
+	t0 = std::max(tmin, tzmin);
+	t1 = std::min(tmax, tzmax);
 
 	return true;
 }

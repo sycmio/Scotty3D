@@ -24,7 +24,7 @@ using std::max;
 
 namespace CMU462 {
 
- //#define ENABLE_RAY_LOGGING 1
+ #define ENABLE_RAY_LOGGING 1
 
 PathTracer::PathTracer(size_t ns_aa, size_t max_ray_depth, size_t ns_area_light,
                        size_t ns_diff, size_t ns_glsy, size_t ns_refr,
@@ -419,7 +419,7 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
   // indirect lighting components calculated in the code below. The starter
   // code overwrites L_out by (.5,.5,.5) so that you can test your geometry
   // queries before you implement path tracing.
-  L_out = Spectrum(5.f, 5.f, 5.f);
+  L_out = Spectrum(.0f, .0f, .0f);
 
   Vector3D hit_p = r.o + r.d * isect.t;
   Vector3D hit_n = isect.n;
@@ -443,13 +443,11 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
 
     // ### Estimate direct lighting integral
     for (SceneLight* light : scene->lights) {
-
       // no need to take multiple samples from a point/directional source
       int num_light_samples = light->is_delta_light() ? 1 : ns_area_light;
 
       // integrate light over the hemisphere about the normal
       for (int i = 0; i < num_light_samples; i++) {
-
         // returns a vector 'dir_to_light' that is a direction from
         // point hit_p to the point on the light source.  It also returns
         // the distance from point x to this point on the light source.
@@ -472,6 +470,10 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
         // TODO (PathTracer):
         // (Task 4) Construct a shadow ray and compute whether the intersected surface is
         // in shadow. Only accumulate light if not in shadow.
+		//Ray shadow_ray(hit_p + EPS_D * dir_to_light, dir_to_light, dist_to_light- EPS_D*1000);
+		//if (!bvh->intersect(shadow_ray)) {
+		//	L_out += (cos_theta / (num_light_samples * pr)) * f * light_L;
+		//}
         L_out += (cos_theta / (num_light_samples * pr)) * f * light_L;
       }
     }

@@ -37,11 +37,11 @@ bool Sphere::intersect(const Ray& r) const {
 	}
 	else {
 		if (t1 >= r.min_t&&t1 <= r.max_t) {
-			r.max_t = t1;
+			//r.max_t = t1;
 			return true;
 		}
 		else if (t2 >= r.min_t&&t2 <= r.max_t) {
-			r.max_t = t2;
+			//r.max_t = t2;
 			return true;
 		}
 		else {

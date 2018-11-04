@@ -189,6 +189,12 @@ bool BVHAccel::intersect(const Ray &ray) const {
 		}
 	}
 	return false;
+	//bool hit = false;
+	//for (size_t p = 0; p < primitives.size(); ++p) {
+	//	if (primitives[p]->intersect(ray)) hit = true;
+	//}
+
+	//return hit;
 }
 
 bool BVHAccel::intersect(const Ray &ray, Intersection *isect) const {
@@ -198,7 +204,6 @@ bool BVHAccel::intersect(const Ray &ray, Intersection *isect) const {
   // the BVH that is not an aggregate. When an intersection does happen.
   // You should store the non-aggregate primitive in the intersection data
   // and not the BVH aggregate itself.
-
 	double t0, t1;
 	if (root->bb.intersect(ray, t0, t1)) {
 		if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
@@ -206,15 +211,20 @@ bool BVHAccel::intersect(const Ray &ray, Intersection *isect) const {
 		}
 	}
 	return false;
+	//bool hit = false;
+	//for (size_t p = 0; p < primitives.size(); ++p) {
+	//	if (primitives[p]->intersect(ray, isect)) hit = true;
+	//}
+
+	//return hit;
 }
 
 bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node) const {
+	bool hit = false;
 	if (node->isLeaf()) {
-		bool hit = false;
 		for (size_t p = node->start; p < node->start+node->range; ++p) {
 			if (primitives[p]->intersect(ray)) {
 				hit = true;
-				break;
 			}
 		}
 		return hit;
@@ -242,30 +252,31 @@ bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node) const 
 
 
 		if (first->bb.intersect(ray, t0, t1)) {
-			if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+			if ((t0 <= ray.max_t && t0 >= ray.min_t) || (t1 <= ray.max_t && t1 >= ray.min_t)) {
 				if (find_intersection_recursive(ray, first)) {
-					return true;
+					hit = true;
 				}
 			}
+			
 		}
 		if (second->bb.intersect(ray, t0, t1)) {
-			if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+			if ((t0 <= ray.max_t && t0 >= ray.min_t) || (t1 <= ray.max_t && t1 >= ray.min_t)) {
 				if (find_intersection_recursive(ray, second)) {
-					return true;
+					hit = true;
 				}
 			}
+			
 		}
-		return false;
+		return hit;
 	}
 }
 
 bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node, Intersection *isect) const {
+	bool hit = false;
 	if (node->isLeaf()) {
-		bool hit = false;
 		for (size_t p = node->start; p < node->start + node->range; ++p) {
 			if (primitives[p]->intersect(ray, isect)) {
 				hit = true;
-				break;
 			}
 		}
 		return hit;
@@ -291,22 +302,22 @@ bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node, Inters
 		BVHNode *first = (tbest1 <= tbest2) ? node->l : node->r;
 		BVHNode *second = (tbest1 <= tbest2) ? node->r : node->l;
 
-
 		if (first->bb.intersect(ray, t0, t1)) {
-			if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+			if ((t0 <= ray.max_t && t0 >= ray.min_t) || (t1 <= ray.max_t && t1 >= ray.min_t)) {
 				if (find_intersection_recursive(ray, first, isect)) {
-					return true;
+					hit = true;
 				}
 			}
+			
 		}
 		if (second->bb.intersect(ray, t0, t1)) {
-			if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+			if ((t0 <= ray.max_t && t0 >= ray.min_t)|| (t1 <= ray.max_t && t1 >= ray.min_t)) {
 				if (find_intersection_recursive(ray, second, isect)) {
-					return true;
+					hit = true;
 				}
 			}
 		}
-		return false;
+		return hit;
 	}
 }
 
