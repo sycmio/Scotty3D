@@ -28,6 +28,7 @@ BVHAccel::BVHAccel(const std::vector<Primitive *> &_primitives,
   }
 
   root = new BVHNode(bb, 0, primitives.size());
+  build_BVH_recursive(root, max_leaf_size);
 }
 
 
@@ -37,6 +38,119 @@ BVHAccel::~BVHAccel() {
 
 }
 
+// helper function that constructs BVH recursively
+void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
+	if (node->range <= max_leaf_size) {
+		return;
+	}
+
+	Vector3D extent = node->bb.extent;
+	Vector3D bbmin = node->bb.min;
+	size_t bucket_total_num = 20;
+	int flag;
+	double step_legth;
+	
+	if (extent.x >= extent.y&&extent.x >= extent.z) {
+		flag = 0;
+		step_legth = extent.x / bucket_total_num;
+		sort(primitives.begin() + node->start, primitives.begin() + node->start + node->range,
+			[](const Primitive* lhs, const Primitive* rhs){  return lhs->get_bbox().centroid().x < rhs->get_bbox().centroid().x;});
+	}
+	else if (extent.y >= extent.x&&extent.y >= extent.z) {
+		flag = 1;
+		step_legth = extent.y / bucket_total_num;
+		sort(primitives.begin() + node->start, primitives.begin() + node->start + node->range,
+			[](const Primitive* lhs, const Primitive* rhs) {  return lhs->get_bbox().centroid().y < rhs->get_bbox().centroid().y; });
+	}
+	else {
+		flag = 2;
+		step_legth = extent.z / bucket_total_num;
+		sort(primitives.begin() + node->start, primitives.begin() + node->start + node->range,
+			[](const Primitive* lhs, const Primitive* rhs) {  return lhs->get_bbox().centroid().z < rhs->get_bbox().centroid().z; });
+	}
+
+	
+	// create bucket
+	vector<BBox> mybucket(bucket_total_num, BBox());
+	vector<size_t> mybucket_count(bucket_total_num, 0);
+	for (size_t i = node->start; i < node->start + node->range; ++i) {
+		size_t b;
+		if (flag == 0) {
+			b = floor((primitives[i]->get_bbox().centroid().x - bbmin.x) / (step_legth));
+		}
+		else if (flag == 1) {
+			b = floor((primitives[i]->get_bbox().centroid().y - bbmin.y) / (step_legth));
+		}
+		else {
+			b = floor((primitives[i]->get_bbox().centroid().z - bbmin.z)/ (step_legth));
+		}
+		
+		mybucket[b].expand(primitives[i]->get_bbox());
+		mybucket_count[b]++;
+	}
+
+	double best_SAH = DBL_MAX;
+	double tmp_SAH;
+	size_t best_partition = 0;
+	// find best partition
+	for (size_t i = 1; i < bucket_total_num; ++i) {
+		BBox box1, box2;
+		size_t count1 = 0;
+		size_t count2 = 0;
+		for (size_t j = 0; j < i; ++j) {
+			box1.expand(mybucket[j]);
+			count1 += mybucket_count[j];
+		}
+		for (size_t j = i; j < bucket_total_num; ++j) {
+			box2.expand(mybucket[j]);
+			count2 += mybucket_count[j];
+		}
+		if (count1 == 0 || count2 == 0) {
+			continue;
+		}
+		tmp_SAH = count1 * box1.surface_area() / node->bb.surface_area() + count2 * box2.surface_area() / node->bb.surface_area();
+		if (tmp_SAH < best_SAH) {
+			best_partition = i;
+			best_SAH = tmp_SAH;
+		}
+	}
+
+	// construct children node recursively
+	BBox box1, box2;
+	size_t count1 = 0;
+	size_t count2 = 0;
+	if (best_partition == 0) { // if all centroids fall into one bucket
+
+		for (size_t j = node->start; j < node->start + size_t(node->range / 2); ++j) {
+			box1.expand(primitives[j]->get_bbox());
+			count1++;
+		}
+		for (size_t j = node->start + size_t(node->range / 2); j < node->start + node->range; ++j) {
+			box2.expand(primitives[j]->get_bbox());
+			count2++;
+		}
+
+	}
+	else { // general case
+		for (size_t j = 0; j < best_partition; ++j) {
+			box1.expand(mybucket[j]);
+			count1 += mybucket_count[j];
+		}
+		for (size_t j = best_partition; j < bucket_total_num; ++j) {
+			box2.expand(mybucket[j]);
+			count2 += mybucket_count[j];
+		}
+	}
+
+	BVHNode* lc = new BVHNode(box1, node->start, count1);
+	BVHNode* rc = new BVHNode(box2, node->start + count1, count2);
+
+	node->l = lc;
+	node->r = rc;
+	build_BVH_recursive(lc, max_leaf_size);
+	build_BVH_recursive(rc, max_leaf_size);
+}
+
 BBox BVHAccel::get_bbox() const { return root->bb; }
 
 bool BVHAccel::intersect(const Ray &ray) const {
@@ -44,13 +158,13 @@ bool BVHAccel::intersect(const Ray &ray) const {
   // Implement ray - bvh aggregate intersection test. A ray intersects
   // with a BVH aggregate if and only if it intersects a primitive in
   // the BVH that is not an aggregate.
-
-  bool hit = false;
-  for (size_t p = 0; p < primitives.size(); ++p) {
-    if (primitives[p]->intersect(ray)) hit = true;
-  }
-
-  return hit;
+	double t0, t1;
+	if (root->bb.intersect(ray, t0, t1)) {
+		if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+			return find_intersection_recursive(ray, root);
+		}
+	}
+	return false;
 }
 
 bool BVHAccel::intersect(const Ray &ray, Intersection *isect) const {
@@ -61,12 +175,115 @@ bool BVHAccel::intersect(const Ray &ray, Intersection *isect) const {
   // You should store the non-aggregate primitive in the intersection data
   // and not the BVH aggregate itself.
 
-  bool hit = false;
-  for (size_t p = 0; p < primitives.size(); ++p) {
-    if (primitives[p]->intersect(ray, isect)) hit = true;
-  }
+	double t0, t1;
+	if (root->bb.intersect(ray, t0, t1)) {
+		if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+			return find_intersection_recursive(ray, root, isect);
+		}
+	}
+	return false;
+}
 
-  return hit;
+bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node) const {
+	if (node->isLeaf()) {
+		bool hit = false;
+		for (size_t p = node->start; p < node->start+node->range; ++p) {
+			if (primitives[p]->intersect(ray)) {
+				hit = true;
+				break;
+			}
+		}
+		return hit;
+	}
+	else {
+		double t0, t1, t2, t3, tbest1, tbest2;
+		
+		bool flag1, flag2;
+		node->l->bb.intersect(ray, t0, t1);
+		node->r->bb.intersect(ray, t2, t3);
+		if (t0 >= ray.min_t&&t0 <= ray.max_t) {
+			tbest1 = t0;
+		}
+		else {
+			tbest1 = t1;
+		}
+		if (t2 >= ray.min_t&&t2 <= ray.max_t) {
+			tbest2 = t2;
+		}
+		else {
+			tbest2 = t3;
+		}
+		BVHNode *first = (tbest1 <= tbest2) ? node->l : node->r;
+		BVHNode *second = (tbest1 <= tbest2) ? node->r : node->l;
+
+
+		if (first->bb.intersect(ray, t0, t1)) {
+			if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+				if (find_intersection_recursive(ray, first)) {
+					return true;
+				}
+			}
+		}
+		if (second->bb.intersect(ray, t0, t1)) {
+			if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+				if (find_intersection_recursive(ray, second)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+}
+
+bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node, Intersection *isect) const {
+	if (node->isLeaf()) {
+		bool hit = false;
+		for (size_t p = node->start; p < node->start + node->range; ++p) {
+			if (primitives[p]->intersect(ray, isect)) {
+				hit = true;
+				break;
+			}
+		}
+		return hit;
+	}
+	else {
+		double t0, t1, t2, t3, tbest1, tbest2;
+
+		bool flag1, flag2;
+		node->l->bb.intersect(ray, t0, t1);
+		node->r->bb.intersect(ray, t2, t3);
+		if (t0 >= ray.min_t&&t0 <= ray.max_t) {
+			tbest1 = t0;
+		}
+		else {
+			tbest1 = t1;
+		}
+		if (t2 >= ray.min_t&&t2 <= ray.max_t) {
+			tbest2 = t2;
+		}
+		else {
+			tbest2 = t3;
+		}
+		BVHNode *first = (tbest1 <= tbest2) ? node->l : node->r;
+		BVHNode *second = (tbest1 <= tbest2) ? node->r : node->l;
+
+
+		if (first->bb.intersect(ray, t0, t1)) {
+			if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+				if (find_intersection_recursive(ray, first, isect)) {
+					return true;
+				}
+			}
+		}
+		if (second->bb.intersect(ray, t0, t1)) {
+			if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+				if (find_intersection_recursive(ray, second, isect)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 }
 
 }  // namespace StaticScene
