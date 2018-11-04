@@ -26,7 +26,6 @@ BVHAccel::BVHAccel(const std::vector<Primitive *> &_primitives,
   for (size_t i = 0; i < primitives.size(); ++i) {
     bb.expand(primitives[i]->get_bbox());
   }
-
   root = new BVHNode(bb, 0, primitives.size());
   build_BVH_recursive(root, max_leaf_size);
 }
@@ -35,15 +34,26 @@ BVHAccel::BVHAccel(const std::vector<Primitive *> &_primitives,
 BVHAccel::~BVHAccel() {
   // TODO (PathTracer):
   // Implement a proper destructor for your BVH accelerator aggregate
-
+	deconstruct_BVH_recursive(root);
+}
+// helper function that deconstructs BVH recursively
+void BVHAccel::deconstruct_BVH_recursive(BVHNode* node) {
+	if (node->isLeaf()) {
+		delete node;
+	}
+	else {
+		deconstruct_BVH_recursive(node->l);
+		deconstruct_BVH_recursive(node->r);
+		delete node;
+	}
 }
 
 // helper function that constructs BVH recursively
+// the following implementation try all x/y/z axis and divide the best
 void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 	if (node->range <= max_leaf_size) {
 		return;
 	}
-
 	Vector3D extent = node->bb.extent;
 	Vector3D bbmin = node->bb.min;
 	size_t bucket_total_num = 20;
@@ -54,6 +64,9 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 	size_t best_count1 = 0;
 	size_t best_count2 = 0;
 	BBox best_box1, best_box2;
+
+	vector<BBox> mybucket;
+	vector<size_t> mybucket_count;
 	
 	for (flag = 0; flag < 3; flag++) { // try x/y/z axis
 		if (flag == 0) {
@@ -72,8 +85,13 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 				[](const Primitive* lhs, const Primitive* rhs) {  return lhs->get_bbox().centroid().z < rhs->get_bbox().centroid().z; });
 		}
 		// create bucket
-		vector<BBox> mybucket(bucket_total_num, BBox());
-		vector<size_t> mybucket_count(bucket_total_num, 0);
+		mybucket.clear();
+		mybucket_count.clear();
+		for (int k = 0; k < bucket_total_num; k++) {
+			BBox newbox;
+			mybucket.push_back(newbox);
+			mybucket_count.push_back(0);
+		}
 		for (size_t i = node->start; i < node->start + node->range; ++i) {
 			size_t b;
 			if (flag == 0) {
@@ -89,7 +107,6 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 			mybucket[b].expand(primitives[i]->get_bbox());
 			mybucket_count[b]++;
 		}
-		
 		double best_SAH = DBL_MAX;
 		double tmp_SAH;
 		size_t best_partition = 0;
@@ -115,8 +132,7 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 				best_SAH = tmp_SAH;
 			}
 		}
-
-		// construct children node recursively
+		// find possible best partition
 		BBox box1, box2;
 		size_t count1 = 0;
 		size_t count2 = 0;
@@ -137,7 +153,7 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 			best_count2 = count2;
 		}
 	}
-
+	
 	if (best_flag==-1) { // all fall into one bucket, then divide along z axis
 		for (size_t j = node->start; j < node->start + size_t(node->range / 2); ++j) {
 			best_box1.expand(primitives[j]->get_bbox());
@@ -166,6 +182,7 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 		}
 	}
 
+	// construct children node recursively
 	BVHNode* lc = new BVHNode(best_box1, node->start, best_count1);
 	BVHNode* rc = new BVHNode(best_box2, node->start + best_count1, best_count2);
 
@@ -174,6 +191,7 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 	build_BVH_recursive(lc, max_leaf_size);
 	build_BVH_recursive(rc, max_leaf_size);
 }
+
 
 BBox BVHAccel::get_bbox() const { return root->bb; }
 

@@ -114,6 +114,8 @@ class BVHAccel : public Aggregate {
    */
   void drawOutline(const Color& c) const {}
 
+  void deconstruct_BVH_recursive(BVHNode* node);
+
   void build_BVH_recursive(BVHNode* node, const size_t max_leaf_size);
 
   bool find_intersection_recursive(const Ray &ray, BVHNode* node) const;
