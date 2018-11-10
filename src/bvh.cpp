@@ -202,7 +202,7 @@ bool BVHAccel::intersect(const Ray &ray) const {
   // the BVH that is not an aggregate.
 	double t0, t1;
 	if (root->bb.intersect(ray, t0, t1)) {
-		if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+		if (!((t0 < ray.min_t&&t1 < ray.min_t) || (t0 > ray.max_t&&t1 > ray.max_t))) {
 			return find_intersection_recursive(ray, root);
 		}
 	}
@@ -224,7 +224,7 @@ bool BVHAccel::intersect(const Ray &ray, Intersection *isect) const {
   // and not the BVH aggregate itself.
 	double t0, t1;
 	if (root->bb.intersect(ray, t0, t1)) {
-		if ((t0 >= ray.min_t&&t0 <= ray.max_t) || (t1 >= ray.min_t&&t1 <= ray.max_t)) {
+		if (!((t0 < ray.min_t&&t1 < ray.min_t) || (t0 > ray.max_t&&t1 > ray.max_t))) {
 			return find_intersection_recursive(ray, root, isect);
 		}
 	}
@@ -268,14 +268,14 @@ bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node) const 
 
 
 		if (first->bb.intersect(ray, t0, t1)) {
-			if ((t0 <= ray.max_t && t0 >= ray.min_t) || (t1 <= ray.max_t && t1 >= ray.min_t)) {
+			if (!((t0 < ray.min_t&&t1 < ray.min_t) || (t0 > ray.max_t&&t1 > ray.max_t))) {
 				if (find_intersection_recursive(ray, first)) {
 					return true;
 				}
 			}			
 		}
 		if (second->bb.intersect(ray, t0, t1)) {
-			if ((t0 <= ray.max_t && t0 >= ray.min_t) || (t1 <= ray.max_t && t1 >= ray.min_t)) {
+			if (!((t0 < ray.min_t&&t1 < ray.min_t) || (t0 > ray.max_t&&t1 > ray.max_t))) {
 				if (find_intersection_recursive(ray, second)) {
 					return true;
 				}
@@ -317,7 +317,7 @@ bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node, Inters
 		BVHNode *second = (tbest1 <= tbest2) ? node->r : node->l;
 
 		if (first->bb.intersect(ray, t0, t1)) {
-			if ((t0 <= ray.max_t && t0 >= ray.min_t) || (t1 <= ray.max_t && t1 >= ray.min_t)) {
+			if (!((t0 < ray.min_t&&t1 < ray.min_t) || (t0 > ray.max_t&&t1 > ray.max_t))) {
 				if (find_intersection_recursive(ray, first, isect)) {
 					hit = true;
 				}
@@ -325,7 +325,7 @@ bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node, Inters
 			
 		}
 		if (second->bb.intersect(ray, t0, t1)) {
-			if ((t0 <= ray.max_t && t0 >= ray.min_t)|| (t1 <= ray.max_t && t1 >= ray.min_t)) {
+			if (!((t0 < ray.min_t&&t1 < ray.min_t) || (t0 > ray.max_t&&t1 > ray.max_t))) {
 				if (find_intersection_recursive(ray, second, isect)) {
 					hit = true;
 				}
