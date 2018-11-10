@@ -238,14 +238,12 @@ bool BVHAccel::intersect(const Ray &ray, Intersection *isect) const {
 }
 
 bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node) const {
-	bool hit = false;
 	if (node->isLeaf()) {
 		for (size_t p = node->start; p < node->start+node->range; ++p) {
 			if (primitives[p]->intersect(ray)) {
-				hit = true;
+				return true;
 			}
 		}
-		return hit;
 	}
 	else {
 		double t0, t1, t2, t3, tbest1, tbest2;
@@ -272,21 +270,19 @@ bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node) const 
 		if (first->bb.intersect(ray, t0, t1)) {
 			if ((t0 <= ray.max_t && t0 >= ray.min_t) || (t1 <= ray.max_t && t1 >= ray.min_t)) {
 				if (find_intersection_recursive(ray, first)) {
-					hit = true;
+					return true;
 				}
-			}
-			
+			}			
 		}
 		if (second->bb.intersect(ray, t0, t1)) {
 			if ((t0 <= ray.max_t && t0 >= ray.min_t) || (t1 <= ray.max_t && t1 >= ray.min_t)) {
 				if (find_intersection_recursive(ray, second)) {
-					hit = true;
+					return true;
 				}
 			}
-			
-		}
-		return hit;
+		}	
 	}
+	return false;
 }
 
 bool BVHAccel::find_intersection_recursive(const Ray &ray, BVHNode* node, Intersection *isect) const {

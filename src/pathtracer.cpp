@@ -470,7 +470,8 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
         // TODO (PathTracer):
         // (Task 4) Construct a shadow ray and compute whether the intersected surface is
         // in shadow. Only accumulate light if not in shadow.
-		Ray shadow_ray(hit_p + EPS_D * dir_to_light, dir_to_light, dist_to_light);
+		Ray shadow_ray(hit_p + EPS_D * dir_to_light, dir_to_light, 0);
+		shadow_ray.max_t = dist_to_light;
 		if (!bvh->intersect(shadow_ray)) {
 			L_out += (cos_theta / (num_light_samples * pr)) * f * light_L;
 		}
@@ -490,12 +491,24 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
   // reflection or transmittence ray depending on
   // surface type -- see BSDF::sample_f()
 
+  //Vector3D w_in;
+  //float pr;
+  //Spectrum& f = isect.bsdf->sample_f(w_out, &w_in, &pr);
+
   // (2) potentially terminate path (using Russian roulette)
+
+  //float terminate_p = 1.f - f.illum();
+  //terminate_p = max(0.f, terminate_p);
+  //float rand_num = (float)(std::rand()) / RAND_MAX;
+  //if (rand_num < terminate_p || r.depth >= max_ray_depth) {
+	 // return L_out;
+  //}
 
   // (3) evaluate weighted reflectance contribution due 
   // to light from this direction
 
   return L_out;
+  //return L_out + (f * trace_ray(Ray(hit_p, o2w*w_in, int(r.depth + 1))) * (w_in.z / (pr*(1 - terminate_p))));
 }
 
 Spectrum PathTracer::raytrace_pixel(size_t x, size_t y) {
