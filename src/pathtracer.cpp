@@ -490,24 +490,25 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
   // reflection or transmittence ray depending on
   // surface type -- see BSDF::sample_f()
 
-  //Vector3D w_in;
-  //float pr;
-  //Spectrum& f = isect.bsdf->sample_f(w_out, &w_in, &pr);
+  Vector3D w_in;
+  float pr;
+  Spectrum& f = isect.bsdf->sample_f(w_out, &w_in, &pr);
 
   // (2) potentially terminate path (using Russian roulette)
 
-  //float terminate_p = 1.f - f.illum();
-  //terminate_p = max(0.f, terminate_p);
-  //float rand_num = (float)(std::rand()) / RAND_MAX;
-  //if (rand_num < terminate_p || r.depth >= max_ray_depth) {
-	 // return L_out;
-  //}
+  float terminate_p = 1.f - f.illum();
+  terminate_p = max(0.f, terminate_p);
+  float rand_num = (float)(std::rand()) / RAND_MAX;
+  if (rand_num < terminate_p || r.depth >= max_ray_depth) {
+	  return L_out;
+  }
 
   // (3) evaluate weighted reflectance contribution due 
   // to light from this direction
 
-  return L_out;
-  //return L_out + (f * trace_ray(Ray(hit_p, o2w*w_in, int(r.depth + 1))) * (w_in.z / (pr*(1 - terminate_p))));
+  //return L_out;
+
+  return L_out + (f * trace_ray(Ray(hit_p + o2w*w_in, o2w*w_in, int(r.depth + 1))) * (w_in.z / (pr*(1 - terminate_p))));
 }
 
 Spectrum PathTracer::raytrace_pixel(size_t x, size_t y) {

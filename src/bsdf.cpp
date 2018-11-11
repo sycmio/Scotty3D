@@ -44,12 +44,12 @@ Spectrum DiffuseBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf) {
 	double Xi1 = (double)(std::rand()) / RAND_MAX;
 	double Xi2 = (double)(std::rand()) / RAND_MAX;
 
-	double theta = acos(sqrt(Xi1));
+	double theta = asin(sqrt(Xi1));
 	double phi = 2.0 * PI * Xi2;
 
-	double xs = sinf(theta) * cosf(phi);
-	double ys = sinf(theta) * sinf(phi);
-	double zs = cosf(theta);
+	double xs = sqrt(Xi1) * cosf(phi);
+	double ys = sqrt(Xi1) * sinf(phi);
+	double zs = sqrt(1- Xi1);
 
 	*wi = Vector3D(xs, ys, zs);
 
