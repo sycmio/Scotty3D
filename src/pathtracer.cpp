@@ -509,7 +509,7 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
 
 	  //return L_out;
 
-	  L_out += (f * trace_ray(Ray(hit_p + EPS_D * o2w*w_in, o2w*w_in, int(r.depth + 1))) * (w_in.z / (pr*(1 - terminate_p)))) * (1.f / ray_num);
+	  L_out += (f * trace_ray(Ray(hit_p + EPS_D * o2w*w_in, o2w*w_in, int(r.depth + 1))) * (abs(w_in.z) / (pr*(1 - terminate_p)))) * (1.f / ray_num);
   }
   return L_out;
 
