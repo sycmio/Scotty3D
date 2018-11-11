@@ -56,7 +56,7 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 	}
 	Vector3D extent = node->bb.extent;
 	Vector3D bbmin = node->bb.min;
-	size_t bucket_total_num = 20;
+	size_t bucket_total_num = 25;
 	int flag;
 	double step_legth;
 	double best_SAH_all = DBL_MAX;
@@ -79,11 +79,12 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 			sort(primitives.begin() + node->start, primitives.begin() + node->start + node->range,
 				[](const Primitive* lhs, const Primitive* rhs) {  return lhs->get_bbox().centroid().y < rhs->get_bbox().centroid().y; });
 		}
-		else {
+		else if (flag == 2) {
 			step_legth = extent.z / bucket_total_num;
 			sort(primitives.begin() + node->start, primitives.begin() + node->start + node->range,
 				[](const Primitive* lhs, const Primitive* rhs) {  return lhs->get_bbox().centroid().z < rhs->get_bbox().centroid().z; });
 		}
+
 		// create bucket
 		mybucket.clear();
 		mybucket_count.clear();
@@ -103,7 +104,7 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 			else {
 				b = floor((primitives[i]->get_bbox().centroid().z - bbmin.z) / (step_legth));
 			}
-
+			b = min(b, bucket_total_num - 1);
 			mybucket[b].expand(primitives[i]->get_bbox());
 			mybucket_count[b]++;
 		}
@@ -126,7 +127,7 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 			if (count1 == 0 || count2 == 0) {
 				continue;
 			}
-			tmp_SAH = count1 * box1.surface_area() / node->bb.surface_area() + count2 * box2.surface_area() / node->bb.surface_area();
+			tmp_SAH = count1 * box1.surface_area() + count2 * box2.surface_area();
 			if (tmp_SAH < best_SAH) {
 				best_partition = i;
 				best_SAH = tmp_SAH;
@@ -166,20 +167,18 @@ void BVHAccel::build_BVH_recursive(BVHNode* node, const size_t max_leaf_size) {
 	}
 	else { // general case
 		if (best_flag == 0) {
-			step_legth = extent.x / bucket_total_num;
 			sort(primitives.begin() + node->start, primitives.begin() + node->start + node->range,
 				[](const Primitive* lhs, const Primitive* rhs) {  return lhs->get_bbox().centroid().x < rhs->get_bbox().centroid().x; });
 		}
 		else if (best_flag == 1) {
-			step_legth = extent.y / bucket_total_num;
 			sort(primitives.begin() + node->start, primitives.begin() + node->start + node->range,
 				[](const Primitive* lhs, const Primitive* rhs) {  return lhs->get_bbox().centroid().y < rhs->get_bbox().centroid().y; });
 		}
-		else {
-			step_legth = extent.z / bucket_total_num;
+		else if (best_flag == 2){
 			sort(primitives.begin() + node->start, primitives.begin() + node->start + node->range,
 				[](const Primitive* lhs, const Primitive* rhs) {  return lhs->get_bbox().centroid().z < rhs->get_bbox().centroid().z; });
 		}
+
 	}
 
 	// construct children node recursively
