@@ -147,7 +147,7 @@ Spectrum GlassBSDF::sample_f(const Vector3D& wo, Vector3D* wi, float* pdf) {
 			*pdf = Fr;
 		}
 		else {
-			*pdf = 1 - Fr;
+			*pdf = 1.f - Fr;
 		}
 	}
 	else {

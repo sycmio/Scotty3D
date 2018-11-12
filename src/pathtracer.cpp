@@ -404,6 +404,8 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
     // TODO (PathTracer):
     // (Task 7) If you have an environment map, return the Spectrum this ray
     // samples from the environment map. If you don't return black.
+	if (this->envLight != nullptr)
+		return this->envLight->sample_dir(r);
     return Spectrum(0, 0, 0);
   }
 
@@ -489,7 +491,7 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
   // (1) randomly select a new ray direction (it may be
   // reflection or transmittence ray depending on
   // surface type -- see BSDF::sample_f()
-  int ray_num = 4;
+  int ray_num = isect.bsdf->is_delta() ? 1 : 4;
   for (int j = 0; j < ray_num; j++) {
 	  Vector3D w_in;
 	  float pr;

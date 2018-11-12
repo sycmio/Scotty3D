@@ -5,6 +5,7 @@
 #include "../image.h"
 #include "scene.h"
 
+using namespace std;
 namespace CMU462 {
 namespace StaticScene {
 
@@ -45,6 +46,9 @@ class EnvironmentLight : public SceneLight {
 
  private:
   const HDRImageBuffer* envMap;
+  Matrix3x3 sampleToWorld, worldToSample;
+  vector<vector<double>> my_pdf, my_cpdf;
+  vector<double> my_p_theta, my_c_p_theta;
 };  // class EnvironmentLight
 
 }  // namespace StaticScene
