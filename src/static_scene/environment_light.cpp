@@ -34,7 +34,7 @@ EnvironmentLight::EnvironmentLight(const HDRImageBuffer* envMap)
 			my_p_theta[i] += my_pdf[i][j];
 		}
 	}
-	// norm pdf sum to 1, compute p_theta and cpdf 
+	// norm pdf sum to 1, compute p_theta, c_p_theta and cpdf 
 	double my_c_p_theta_sum = 0;
 	for (int i = 0; i < height; i++) {
 		my_p_theta[i] /= sum;
