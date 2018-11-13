@@ -472,7 +472,7 @@ Spectrum PathTracer::trace_ray(const Ray &r) {
         // TODO (PathTracer):
         // (Task 4) Construct a shadow ray and compute whether the intersected surface is
         // in shadow. Only accumulate light if not in shadow.
-		Ray shadow_ray(hit_p + EPS_D * dir_to_light, dir_to_light, dist_to_light, 0);
+		Ray shadow_ray(hit_p + EPS_D * dir_to_light, dir_to_light, dist_to_light - 2 * EPS_D, 0);
 		if (!bvh->intersect(shadow_ray)) {
 			L_out += (cos_theta / (num_light_samples * pr)) * f * light_L;
 		}
