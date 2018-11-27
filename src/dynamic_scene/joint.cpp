@@ -71,6 +71,18 @@ StaticScene::SceneObject* Joint::get_static_object() { return nullptr; }
 // The real calculation.
 void Joint::calculateAngleGradient(Joint* goalJoint, Vector3D q) {
   // TODO (Animation) task 2B
+	vector<Vector3D> axes(3);
+	getAxes(axes);
+	Vector3D p = axis;
+	Vector3D Ji0 = cross(axes[0],axis);
+	Vector3D Ji1 = cross(axes[1], axis);
+	Vector3D Ji2 = cross(axes[2], axis);
+	double gradient0 = dot(Ji0, goalJoint->position - q);
+	double gradient1 = dot(Ji1, goalJoint->position - q);
+	double gradient2 = dot(Ji2, goalJoint->position - q);
+	ikAngleGradient.x = gradient0;
+	ikAngleGradient.y = gradient1;
+	ikAngleGradient.z = gradient2;
 }
 
 // The constructor sets the dynamic angle and velocity of
@@ -141,9 +153,12 @@ Matrix4x4 Joint::getTransformation() {
   along the axis of those joints. Finally, apply the mesh's transformation at
   the end.
   */
-
   Matrix4x4 T = Matrix4x4::identity();
-  return T;
+  for (Joint* j = this->parent; j != nullptr; j = j->parent) {
+	  Matrix4x4 curT = Matrix4x4::translation(j->axis) * j->getRotation();
+	  T = curT * T;
+  }
+  return this->skeleton->mesh->getTransformation() * T;
 }
 
 Matrix4x4 Joint::getBindTransformation() {
@@ -164,8 +179,11 @@ Vector3D Joint::getBasePosInWorld() {
   utilize the transformation returned by Joint::getTransform() to compute the
   base position in world coordinate frame.
   */
-
-  return Vector3D();
+	Vector4D q(position, 1.);
+	q = getTransformation() * q;
+	double w = q.w;
+	q /= w;
+	return q.to3D();
 }
 
 Vector3D Joint::getEndPosInWorld() {
@@ -174,8 +192,12 @@ Vector3D Joint::getEndPosInWorld() {
   joint's transformation and translate along this joint's axis to get the end
   position in world coordinate frame.
   */
-
-  return Vector3D();
+	Vector4D q(position, 1.);
+	Matrix4x4 curT = Matrix4x4::translation(axis) * getRotation();
+	q =  getTransformation() * curT * q;
+	double w = q.w;
+	q /= w;
+	return q.to3D();
 }
 }  // namespace DynamicScene
 }  // namespace CMU462
