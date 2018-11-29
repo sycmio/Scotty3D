@@ -47,6 +47,48 @@ Mesh::Mesh(Collada::PolymeshInfo &polyMesh, const Matrix4x4 &transform) {
 
 void Mesh::linearBlendSkinning(bool useCapsuleRadius) {
   // TODO (Animation) Task 3a, Task 3b
+	for (auto v = mesh.verticesBegin(); v != mesh.verticesEnd(); v++) {
+		vector<LBSInfo> LBSinfos;
+		double inv_dis_sum = 0.;
+		for (auto j = skeleton->joints.begin(); j != skeleton->joints.end(); j++) {
+			// Compute the vertex's position with respect to each joint j in the skeleton in j's coordinate 
+			Vector4D local_pos = ((*j)->getBindTransformation()).inv() * Vector4D(v->bindPosition, 1.);
+			// transform to world frame
+			Vector4D world_pos = (*j)->getTransformation() * (*j)->getRotation() * local_pos;
+			Vector3D world_pos_3D = world_pos.projectTo3D();
+			// Find the closest point on joint j's bone segment and compute the distance
+			Vector3D base_pos = (*j)->getBasePosInWorld();
+			Vector3D end_pos = (*j)->getEndPosInWorld();
+
+			Vector3D closest_pos;
+			double closest_dis;
+			double seg_length_square = (end_pos - base_pos).norm2();
+			if (seg_length_square == 0.0) {
+				closest_pos = base_pos;
+				closest_dis = (closest_pos - world_pos_3D).norm();
+			}
+			else {
+				double t = std::max(0., std::min(1., dot(world_pos_3D - base_pos, end_pos - base_pos) / seg_length_square));
+				closest_pos = base_pos + t * (end_pos - world_pos_3D);
+				closest_dis = (closest_pos - world_pos_3D).norm();
+			}
+
+			// Store the transformed location and distance
+			LBSInfo LBSinfo_j;
+			LBSinfo_j.blendPos = world_pos_3D;
+			LBSinfo_j.distance = closest_dis;
+			inv_dis_sum += 1. / closest_dis;
+			LBSinfos.push_back(LBSinfo_j);
+		}
+		// update vertex pos
+		if (LBSinfos.size() > 0) {
+			Vector3D v_pos(0., 0., 0.);
+			for (auto l = LBSinfos.begin(); l != LBSinfos.end(); l++) {
+				v_pos += ((1. / l->distance) / inv_dis_sum) * l->blendPos;
+			}
+			v->position = v_pos;
+		}
+	}
 }
 
 void Mesh::forward_euler(float timestep, float damping_factor) {

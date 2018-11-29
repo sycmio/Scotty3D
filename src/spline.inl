@@ -1,4 +1,4 @@
-// Given a time between 0 and 1, evaluates a cubic polynomial with
+﻿// Given a time between 0 and 1, evaluates a cubic polynomial with
 // the given endpoint and tangent values at the beginning (0) and
 // end (1) of the interval.  Optionally, one can request a derivative
 // of the spline (0=no derivative, 1=first derivative, 2=2nd derivative).
