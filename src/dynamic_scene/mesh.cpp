@@ -69,10 +69,14 @@ void Mesh::linearBlendSkinning(bool useCapsuleRadius) {
 			}
 			else {
 				double t = std::max(0., std::min(1., dot(world_pos_3D - base_pos, end_pos - base_pos) / seg_length_square));
-				closest_pos = base_pos + t * (end_pos - world_pos_3D);
+				closest_pos = base_pos + t * (end_pos - base_pos);
 				closest_dis = (closest_pos - world_pos_3D).norm();
 			}
-
+			if (useCapsuleRadius) { // if use threshold
+				if ((*j)->capsuleRadius < closest_dis) {
+					continue;
+				}
+			}
 			// Store the transformed location and distance
 			LBSInfo LBSinfo_j;
 			LBSinfo_j.blendPos = world_pos_3D;
