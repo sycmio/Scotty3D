@@ -179,7 +179,6 @@ Vector3D Joint::getBasePosInWorld() {
   utilize the transformation returned by Joint::getTransform() to compute the
   base position in world coordinate frame.
   */
-	//Vector4D q(position, 1.);
 	Vector4D q(0., 0., 0., 1.);
 	q = getTransformation() * q;
 	return q.projectTo3D();
@@ -191,7 +190,6 @@ Vector3D Joint::getEndPosInWorld() {
   joint's transformation and translate along this joint's axis to get the end
   position in world coordinate frame.
   */
-	//Vector4D q(position, 1.);
 	Vector4D q(0., 0., 0., 1.);
 	Matrix4x4 curT = SceneObject::getTransformation() * Matrix4x4::translation(axis);
 	q =  getTransformation() * curT * q;

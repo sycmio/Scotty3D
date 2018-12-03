@@ -54,7 +54,7 @@ void Mesh::linearBlendSkinning(bool useCapsuleRadius) {
 			// Compute the vertex's position with respect to each joint j in the skeleton in j's coordinate 
 			Vector4D local_pos = ((*j)->getBindTransformation()).inv() * Vector4D(v->bindPosition, 1.);
 			// transform to world frame
-			Vector4D world_pos = (*j)->getTransformation() * (*j)->getRotation() * local_pos;
+			Vector4D world_pos = (*j)->getTransformation() * (*j)->SceneObject::getTransformation() * local_pos;
 			Vector3D world_pos_3D = world_pos.projectTo3D();
 			// Find the closest point on joint j's bone segment and compute the distance
 			Vector3D base_pos = (*j)->getBasePosInWorld();
